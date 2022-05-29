@@ -1,0 +1,195 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{colorlinks,urlcolor=blue, linkcolor=black}
+\usepackage{url}
+
+\begin{document}
+
+\title{ACQ400 Architecture Guide}
+\author{Peter Milne \\ Contact: \href{mailto:peter.milne@d-tacq.co.uk}{peter.milne@d-tacq.co.uk} }
+
+\maketitle
+
+%\begin{abstract}
+%The abstract text goes here.
+%\end{abstract}
+
+\tableofcontents
+
+
+\section{Introduction}
+
+\subsection{ACQ400 Architecture}
+
+The ACQ400 Architecture is a firmware framework used by all D-TACQ “4G” DAQ Appliances, based on the ZYNQ-7000 platform, including
+\begin{enumerate}
+	\item Compact DAQ Appliances: \href{http://www.d-tacq.com/resources/d-tacq-4G-acq4xx-UserGuide-r28.pdf}{ACQ1001, ACQ1002, ACQ1014}
+	\item Mainframe DAQ Appliances: \href{http://www.d-tacq.com/resources/Bolo_calibration_report_user-guide.pdf}{ACQ2006, ACQ2106, ACQ2206}
+	\item MTCA:  \href{https://github.com/seanalsop/bolodsp-doc/releases}{KMCU-Z30, Z7IO}
+	\item Custom: \href{https://github.com/seanalsop/bolodsp-doc/releases}{CPSC2}
+\end{enumerate}
+
+This document describes the structure of the Embedded Software ESW in 3 levels of detail
+\begin{enumerate}
+    \item Overview - a brief description
+    \item User/SystemIntegrator - a detailed at the boot process and structure of the elements
+    \item Developer - describes how to build the system from scratch.
+\end{enumerate}    
+
+\subsection{Intended Audience}
+\begin{enumerate}
+    \item Users
+    \item Developers
+\end{enumerate}  
+
+\subsection{Scope}
+\begin{enumerate}
+    \item ACQ400 Embedded Software
+    \item excludes FPGA development.
+\end{enumerate} 
+
+\subsection{Glossary}
+\begin{enumerate}
+    \item ACQ400 Embedded Software
+    \item excludes FPGA development.
+    • DAQ Appliance: a freestanding networked data acquisition system
+    \item ZYNQ 7000 (Z7)  : Xilinx system on chip architecture.
+    \item PS : Processor System in ZYNQ7000
+    \item PL : Programmable Logic (FPGA part) of ZYNQ7000
+    \item A9 : Dual Core ARM A9 processor found in ZYNQ7000, the processor in PS
+    \item ESW : Embedded SoftWare : software to run on the A9
+    \item Gateware: programmable logic for the PL. This is delivered as an 
+    \item FPGA Personality file.
+    \item Firmware Release: combination of all ESW and Gateware needed to run an ACQ400 System..
+    \item FMC: Vita 57 standard for expansion modules
+    \item ELF : D-TACQ extension of FMC : Analog module uses a limited subset of FMC I/O, optional larger size module, to allow a larger analog payload while at the same time using less FPGA pin resource.
+    \item Carrier/Motherbord: Electronic circuit board with Z7000 SOC, DRAM, Networking and one or more FMC or ELF payload sites.
+    \item QPSI Flash: flash memory in the Z7 system, typically used for customization and robust bootloader storage.       
+\end{enumerate}
+
+\subsection{References}
+\begin{enumerate}
+    \item \href{https://github.com/seanalsop/bolodsp-doc/releases}{4GUG}
+\end{enumerate} 
+
+\subsection{Notation}
+\begin{enumerate}
+    \item command   : indicates name of a program (command)
+    \item preformatted text : literal input or output from terminal session.
+    \item Defined Term : some term or acronym specific to this domain (perhaps referenced in the glossary)
+\end{enumerate} 
+
+\section{Overview}
+
+\subsection{Single Software Image, Multiple FPGA Personalities}
+The ACQ400 firmware system runs on about 10 carrier platforms 1.1, supporting a wide range (>10) analog payload modules.  Each hardware combination of modules and sites, is supported by a unique FPGA personality. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
+
+\subsection{Embedded Linux System}
+The ACQ400 system runs Linux. A single Linux image supports all variants. This is the standard Linux kernel, and a fairly conventional userland, with two exceptions:
+\begin{enumerate}
+    \item Kernel DMA subsystem is non-standard.
+    \item The system root file system rootfs is a RAMDISK. 
+\end{enumerate} 
+
+The RAMDISK rootfs is chosen for 
+\begin{enumerate}
+    \item Robustness: the file system is volatile, and the entire system may be reset or powered off at any time during operation. 
+    \item Realtime performance: the DAQ appliance is a real time system, and must not be subject to any unpredictable delay eg disk access, or swapping.
+\end{enumerate} 
+The ZYNQ7000 has strictly limited DRAM: 1GB. In addition, ACQ400 systems, being aimed at large scale data collection, typically assign at least half the DRAM to data buffers. So this is a restricted memory environment, and the size of the RAMDISK must therefore be kept in bounds.
+The systems are typically fitted with an SD card, and the system boots from the SD card.
+
+\begin{enumerate}
+    \item The SD card is treated as a ROM. There’s no writeable access to the SD card at runtime on a production system.
+    \item However, the SD card is writeable, this is convenient for system maintenance and for firmware upgrade.  After deployment, there should be no files opened for write while the unit is deployed, so it’s still safe to cut the power at any time.
+\end{enumerate} 
+The RAMDISK isn’t ideal for a limited memory system, and a pure ramdisk system (such as D-TACQ ACQ200) has a very limited userland. ACQ400 has a rich user-land, based on Buildroot. Each ACQ400 system also carries a large inventory (can be 100+) of FPGA personalities. ACQ400 handles this by mounting additional read-only file systems from file images on the SD card. The OS then has access to a wide range of software images, loaded on demand. In a typical system, most of this functionality is swapped out at runtime, preserving DRAM.
+Most systems are SD based, however two types of netboot systems are also supported:
+\begin{enumerate}
+    \item Pure TFTP : the entire system boots from a RAMDISK image loaded via TFTP. This has a limited userland, and it does depend on a TFTP server for boot, but once running is self-standing and extremely robust. CPSC2 is the main example of this method.
+    \item NFS : the pure TFTP system boots a limited userland, then brings in the rest of the userland as an NFS mount. This allows high functionality with limited stored state, but it does totally depend on a reliable NFS server during run time.
+\end{enumerate} 
+
+\subsection{Self Identifying System}
+\begin{enumerate}
+    \item On boot, ESW will identify which motherboard it is running on.
+    \item Then it will use SMB (i2c) to identify the current payload 
+        	ie which analog modules are present in the module sites
+    \item The system will then select the first available FPGA personality, and load the FPGA
+    \item The system then proceeds to load kernel modules, instantiate device drivers and all services needed to build the system.
+\end{enumerate}
+=> The same ESW image can run any supported personality, based on runtime identification.
+Z7IO: currently, the ESW is not able to complete system indentification before loading the FPGA, so this is selected at boot time.
+
+\subsection{ESW Components}
+
+\subsubsection{Bootloader: u-boot}
+The system bootloader. u-boot will read local customization from the u-boot environment, then boot the system.
+
+\subsubsection{uImage: kernel image}
+The kernel image contains the Linux kernel executable code.
+
+\subsubsection{initrd : initial ramdisk image}
+The initial filesystem image, with limited functionality, this provides the first userland after boot.
+
+\subsubsection{devicetree}
+This is a data structure that defines the architecture of the particular motherboard, and any customisations.
+\begin{enumerate}
+    \item eg ACQ1001 or ACQ2106, dtb.d/acq1001.dtb, dtb.d/acq2106.dtb
+    \item eg ACQ2106 (no sfp) or ACQ2106sfp (with sfp)., dtb/acq2106.dtb, dtb.d/acq2106sfp.dtb
+\end{enumerate}
+The boot-time dveicetree may be augmented later in the boot-sequence by "devicetree-overlays", that define additional devices once more is known about the system.
+
+\subsubsection{rootfs.tgz}
+This is the main userland. This is created using Buildroot. This is mounted onto the ramdisk at run time, with the goal that most of the userland will NOT be resident in memory at runtime.
+
+\subsubsection{Filesystem overlays}
+These are read-only file system images mounted onto the ramdisk, and most of these images are NOT resident in memory at runtime. The most prominent overlays are:
+\begin{enumerate}
+    \item FPGA stock: a “stock” of all known FPGA personalities; one of these files may be selected to load the FPGA on boot.
+    \item ko stock : a stock of kernel objects (device drivers), and appropriate modules will be loaded on boot.
+    \item EPICS7 : a full EPICS7 implementation is quite large, so it is shipped as an overlay rather than loading everything to RAMDISK.
+\end{enumerate}
+
+\subsubsection{Packages}
+ACQ400 uses a sequenced set of packages to configure the system; packages are tarballs that are expanded onto the ramdisk in sequence, together with initialisation files that are used to instantiate the entire system. Packages may reference overlays to save RAM, and they may load devicetree-overlays to instantiate new devices.
+
+\subsection{SD Boot or QSPI boot}
+Z7 systems typically have a jumper setting to boot from SD (certainly, for all newly assembled units), or from QSPI (soldered flash). On D-TACQ motherboards, initial boot is from SD, then the QSPI is programmed, and the jumper set to QSPI boot.
+The QSPI contains:
+\begin{enumerate}
+    \item (minimum) : u-boot environment ie per-motherboard customization.
+    \item (ideally) : the bootloader, then a motherboard can boot to a prompt even with no SD card present, and remote recovery is possible.
+\end{enumerate}
+
+\subsection{Boot Sequence}
+
+\subsubsection{BOOT.BIN}
+First to load is BOOT.BIN, a file created with Xilinx tools containing:
+\begin{enumerate}
+    \item (minimum) : FSBL: First Stage Bootloader, a fixed boot kernel, and a motherboard specific IO configuration.
+    \item (ideally) : u-boot : the main bootloader.
+\end{enumerate}
+As per 2.5 XREF HOWTO?, in a production system this image is held in QSPI for robustness
+
+\subsubsection{u-boot}
+The u-boot environment includes a BOOTCMD macro that specifies:
+\begin{enumerate}
+    \item module ID (serial number, mac address) :: (ACQx0xx)
+    \item devicetree
+    \item kernel image
+    \item initrd        
+\end{enumerate}
+BOOTCMD loads the three images, and boots uImage
+
+\subsubsection{uImage}
+This is a standard Linux ARM kernel boot up, the Linux system is configured, and all the devices in the devicetree are instantiated, most importantly:
+\begin{enumerate}
+    \item Ethernet eth0 (or eth1)
+    \item All i2c proms in the self-identification system    
+\end{enumerate}
+Finally uImage sets up the initrd and hands over to userland.
+
+
+\end{document}

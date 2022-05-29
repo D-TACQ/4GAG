@@ -191,5 +191,120 @@ This is a standard Linux ARM kernel boot up, the Linux system is configured, and
 \end{enumerate}
 Finally uImage sets up the initrd and hands over to userland.
 
+\subsubsection{initrd}
+The init system runs /etc/init.d/rcS, a highly customized script that will
+\begin{enumerate}
+    \item mount the rootfs file system
+    \item perform any custom network configuration
+    \item load packages in sequence.
+\end{enumerate}
+
+\subsubsection{packages}
+This is the real DAQ Appliance application userland, discussed in more detail in the next section.
+
+\subsubsection{/mnt/local/rc.user}
+Last to run is the file /mnt/local/rc.user, this contains final factory and/or user customisation. rc.user can be configured to make a completely turnkey system.
+
+\subsection{Package Sequence}
+
+
+\subsubsection{03-acq400_common}
+Basic setup common to all platforms.
+
+\subsubsection{05-machine}
+Machine-specific setup eg 05-acq1001-yymmdd.tgz
+In particular, this will enumerate the site payload modules, select an FPGA personality and load the FPGA.
+
+\subsubsection{10-acq420}
+This is the main device driver and operating code of the ACQ400 system.
+Once the FPGA has been loaded, then the core device driver acq420fmc.ko is loaded, and this instantiates a Linux device per site, bringing up all site services, and loading associated kernel modules, notably to instantiate DMA controllers. The package also provides acq400stream, the main data-moving application.
+
+\subsubsection{20-httpd}
+Configures and starts the embedded webserver. The embedded webserver provides useful system observability and diagnostics.
+
+\subsubsection{40-acq400ioc}
+This package loads and configures the embedded EPICS IOC, responsible for running most of the “business logic” of the DAQ appliance, and providing a rich set of control and monitor points for external clients.
+
+\subsubsection{Custom Packages}
+Systems may be customized by installing “nn-custom_PACKAGE modules.
+"install" copy the package to the active package directory: /mnt/packages
+
+\subsection{SD File System Layout}
+The SD card appears in the booted linux system as /mnt
+
+\begin{tabular}{|c|c|}
+\hline 
+/mnt/ko & mountable file system images eg  \\ 
+\hline 
+fpga-511-yymmdd.img & FPGA STOCK \\ 
+\hline 
+packageko-4.14.0-acq400-xilinx-yymmdd.img & kernel object STOCK \\ 
+\hline 
+/mnt/packages & live packages are found here \\ 
+\hline 
+/mnt/packages.opt & optional (inactive) packages \\ 
+\hline 
+/mnt/bin & scripts for firmware upgrade \\ 
+\hline 
+/mnt/boot.d & BOOT.bin instances for supported carriers. \\ 
+\hline 
+/mnt/dtb.d & stock of devicetree instances \\ 
+\hline 
+/mnt/fpga.d & FPGA stock mounted here \\ 
+\hline 
+/mnt/local   & user/system customisation.. \\
+\hline 
+/mnt/local/cal    & calibration files for current payload \\
+\hline 
+/mnt/local/sysconfig  &  system customization. \\
+\hline 
+\end{tabular} 
+
+\subsection{SD card top-level files}
+\begin{tabular}{|c|c|}
+\hline 
+BOOT.BIN & The specific bootloader for this carrier (for SD boot) \\ 
+\hline 
+uImage & The kernel image \\ 
+\hline 
+uramdisk.image.gz & The initial ramdisk initrd \\ 
+\hline 
+rootfs.ext2 & The root file system, to be mounted onto the ramdisk \\ 
+\hline 
+Optionally & • \\ 
+\hline 
+ACQ2106_TOP_04_ff_ff_ff_ff_ff_9011_32B_UDP.bit.gz: & Promoted FPGA Image \\ 
+\hline 
+\end{tabular} 
+
+This is a “PROMOTED” fpga image - provided this image is compatible with the module payload, it will be loaded in preference to the first compatible image in the fpga stock. This is useful for:
+\begin{enumerate}
+    \item Development: load a test image in preference to the release image.
+    \item Patch: when the FPGA image doesn’t exist in the release yet.
+    \item Promoted: when the stock contains multiple compatible images, and we want to force a particular personality to load eg: DEC10 filter.
+\end{enumerate}
+
+\section{User/SystemIntegrator Guide}
+
+\subsection{u-boot environment}
+
+\subsubsection{z7io}
+z7io has NO unit-specific customization in the u-boot environment. Instead, the z7io u-boot reads the eth0 MAC address from a soldered PROM.
+
+\subsection{kernel options}
+
+
+\subsection{userland options}
+
+\subsection{packages}
+
+\section{Developer Guide}
+
+\subsection{BOOT.BIN}
+
+\subsubsection{z7io}
+z7io BOOT.BIN is built from DESY sources.
+
+\subsection{kernel and devicetrees}
 
 \end{document}

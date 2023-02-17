@@ -1,19 +1,50 @@
-\documentclass[10pt,a4paper]{article}
-\usepackage{graphicx}
-\usepackage[hidelinks]{hyperref}
-\hypersetup{colorlinks,urlcolor=blue, linkcolor=black}
-\usepackage{url}
+\documentclass[]{article}
+\usepackage{import}
+
+% Compile me with xelatex. It has proper support for UTF-8, Truetype and OpenType fonts out the box
+
+% Define your document title here
+\newcommand{\mytitle}{ACQ400 Architecture Guide}
+\newcommand{\dtacqDOCREGNumber}{1305-9999-001} % D-TACQ Document Register Number
+\newcommand{\dtacqORDERNumber}{Developer} % DOC Number
+\newcommand{\vhCurrentVersion}{0.1}
+
+\import{../../}{dtacq_doc_style} % Import general document options, custom colours, etc.
+\import{../../}{dtacq_code_styles} % Import code styles
+\usepackage{underscore}   % breaks FAT if in dtacq_doc_style!
+
+% Override standard font
+\setmainfont{Liberation Sans}
+% Override Left Footer to include DOC number
+\lfoot{DOC-\dtacqDOCREGNumber\ - Rev \vhCurrentVersion}
+
 
 \begin{document}
 
 \title{ACQ400 Architecture Guide}
 \author{Peter Milne \\ Contact: \href{mailto:peter.milne@d-tacq.co.uk}{peter.milne@d-tacq.co.uk} }
 
-\maketitle
+\thispagestyle{empty} % This suppresses the page number on titlepage
+\begin{center}\huge{\textbf{\mytitle}}\end{center}
+\vspace{2.5cm}
+\begin{center}
+	\includegraphics{../../dtacq_logo_new}
+\end{center}
+\begin{center}\textcolor{dtacqblue}{\large{\textit{High Performance Simultaneous Data Acquisition}}}\end{center}
+\vspace{5cm}
+%\begin{center}\large{\textcopyright \space D-TACQ Solutions Ltd. Confidential Product Document\\Only to be viewed by D-TACQ and authorised customers}\end{center}
+\begin{center}\large{DOC \#XXXXXX-YY}\end{center}
 
 %\begin{abstract}
 %The abstract text goes here.
 %\end{abstract}
+
+\begin{versionhistory}
+	\vhEntry{0.1}{01/01/2023}{PM}{Created}
+\end{versionhistory}
+\setcounter{table}{0} % Zeroes the table counter so the VerHist table isn't counted
+
+\pagebreak
 
 \tableofcontents
 

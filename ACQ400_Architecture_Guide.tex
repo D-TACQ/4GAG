@@ -40,7 +40,9 @@
 %\end{abstract}
 
 \begin{versionhistory}
-	\vhEntry{0.1}{01/01/2023}{PM}{Created}
+	\vhEntry{0.1}{2022-04-29}{PM}{Created}
+	\vhEntry{0.2}{2022-02-17}{PM}{update to D-TACQ Style}
+	\vhEntry{0.3}{2022-02-17}{PM}{appendix FPGA personality description}
 \end{versionhistory}
 \setcounter{table}{0} % Zeroes the table counter so the VerHist table isn't counted
 
@@ -114,7 +116,7 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 \section{Overview}
 
 \subsection{Single Software Image, Multiple FPGA Personalities}
-The ACQ400 firmware system runs on about 10 carrier platforms 1.1, supporting a wide range (>10) analog payload modules.  Each hardware combination of modules and sites, is supported by a unique FPGA personality. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
+The ACQ400 firmware system runs on about 10 carrier platforms 1.1, supporting a wide range (>10) analog payload modules.  Each hardware combination of modules and sites, is supported by a unique FPGA personality~\ref{sec:fpga-personalities}. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
 
 \subsection{Embedded Linux System}
 The ACQ400 system runs Linux. A single Linux image supports all variants. This is the standard Linux kernel, and a fairly conventional userland, with two exceptions:
@@ -173,7 +175,7 @@ This is a data structure that defines the architecture of the particular motherb
 The boot-time dveicetree may be augmented later in the boot-sequence by "devicetree-overlays", that define additional devices once more is known about the system.
 
 \subsubsection{rootfs.tgz}
-This is the main userland. This is created using Buildroot. This is mounted onto the ramdisk at run time, with the goal that most of the userland will NOT be resident in memory at runtime.
+This is the main userland. This is created using Buildroot. This is expanded onto the SD card at install time, then mounted onto the ramdisk at run time, with the goal that most of the userland will NOT be resident in memory at runtime.
 
 \subsubsection{Filesystem overlays}
 These are read-only file system images mounted onto the ramdisk, and most of these images are NOT resident in memory at runtime. The most prominent overlays are:
@@ -244,7 +246,7 @@ Basic setup common to all platforms.
 
 \subsubsection{05-machine}
 Machine-specific setup eg 05-acq1001-yymmdd.tgz
-In particular, this will enumerate the site payload modules, select an FPGA personality and load the FPGA.
+In particular, this will enumerate the site payload modules, select an FPGA personality and load the FPGA~\ref{sec:fpga-personalities}.
 
 \subsubsection{10-acq420}
 This is the main device driver and operating code of the ACQ400 system.
@@ -337,5 +339,126 @@ z7io has NO unit-specific customization in the u-boot environment. Instead, the 
 z7io BOOT.BIN is built from DESY sources.
 
 \subsection{kernel and devicetrees}
+
+\pagebreak
+
+\section{APPENDIX}
+	
+	
+\subsection{FPGA PERSONALITIES}\label{sec:fpga-personalities}
+
+Let's try explain some personalities. Each Module has a unique "MTYPE", so that we tie the module in the site to the FPGA personality. 
+\href{https://www.d-tacq.com/resources/Products_ACQ400_ModuleIDs.pdf}{ACQ400_ModuleIDs.pdf}
+
+For example:
+\begin{enumerate}
+	\item ACQ435 has M=02
+	\item ACQ465 has M=0A
+	\item AO424  has M=41
+	\item DIO482 has M=6B
+\end{enumerate}
+
+You can see the current stock of personalities on any ACQ400 unit, in /mnt/fpga.d
+
+\begin{lstlisting}[style=bashstyle,frame=single]
+# 162 personalities in stock!
+acq2206_001> find /mnt/fpga.d -type f -print | wc
+162       162      8296
+\end{lstlisting}
+
+\begin{lstlisting}[style=bashstyle,frame=single]
+# 85 of them for ACQ2106
+acq2206_001> find /mnt/fpga.d -type f -print | grep ACQ2106 | wc
+85        85      5103
+\end{lstlisting}
+
+\begin{lstlisting}[style=bashstyle,frame=single]
+# what support for ACQ465 do we already have?
+acq2206_001> find /mnt/fpga.d -type f -print | grep ACQ2106 | grep 0A
+/mnt/fpga.d/ACQ2106_TOP_0A_0A_0A_0A_0A_0A_9011_32B.bit.gz
+# format
+/mnt/fpga.d/CARRIER_____S1_S2_S3_S4_S5_S6_COMMS_FEATURES
+\end{lstlisting}
+
+\begin{lstlisting}[style=bashstyle,frame=single]
+# ZERO released personalities so far for ACQ2206
+acq2206_001> find /mnt/fpga.d -type f -print | grep ACQ2206 | wc
+0         0         0
+
+# So how does this unit work?. We patched in an appropriate personality to load preferentially:
+
+acq2206_001> cat /tmp/fpga_status
+load.fpga loaded /mnt/ACQ2206_TOP_02_02_02_02_02_02_9011_32B.bit.gz
+xiloader r1.01 (c) D-TACQ Solutions
+eoh_location set 0
+Xilinx Bitstream header.
+built with tool version   : 48
+generated from filename   : ACQ2206_TOP_02_02_02_02_02_02_9011_32B
+part                      : 7z030ffg676
+date                      : 2023/02/09
+time                      : 17:45:05
+bitstream data starts at  : 134
+bitstream data size       : 5979916
+
+ERROR: loaded FPGA image NOT in RELEASE at all
+
+# this is compatible with the current payload: M=02 in S1, and the COMMS module M=90
+
+CARRIER
+SITE      MANUFACTURER           MODEL                                PART          SERIAL
+0     D-TACQ Solutions      acq2206sfp                          acq2206sfp       CE4260001
+---------------------------------------------------------------------------------------------
+build detail: root@rpi-008 R1010 Fri Jan 27 14:29:53 UTC 2023
+eth0 macaddr: 00:21:54:14:00:01    eth0  ipaddr: 10.12.197.98
+eth1 macaddr: 00:21:54:24:00:01    eth1  ipaddr:
+---------------------------------------------------------------------------------------------
+
+MODULES
+SITE      MANUFACTURER           MODEL                                PART          SERIAL
+1     D-TACQ Solutions       ACQ435ELF         ACQ435ELF-32FF-5V N=32 M=02       E43510193
+C     D-TACQ Solutions          MGT483                MGT483-SFP4 N=3 M=90       AM4831001
+
+# If a site has no module, then it's a wildcard match.
+\end{lstlisting}
+
+
+
+\begin{lstlisting}[style=bashstyle,frame=single]
+# eg what support for ACQ435 do we already have?
+acq2206_001> find /mnt/fpga.d -type f -print | grep ACQ2106 | grep 02
+/mnt/fpga.d/ACQ2106_TOP_02_02_02_02_02_02_9011.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_02_02_02_02_02_9011_32B-D37.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_02_02_02_02_02_9011_32B.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_02_02_02_02_02_9011_32B_WR-D37.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_02_02_02_02_02_9011_32B_WR.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_02_02_02_41_61_9011.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_ff_02_ff_02_ff_9011_32B_WR_UDP-FFC.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_02_ff_02_ff_02_ff_9011_WR_32B-FFC.bit.gz
+\end{lstlisting}
+
+\begin{lstlisting}[style=bashstyle,frame=single]
+# and for AO424 and DIO482 ?  ... quite a lot of options, usually with 09 (ACQ423), common in PCS applications.
+
+acq2206_001> find /mnt/fpga.d -type f -print | grep ACQ2106 | grep 41 | grep 6B
+/mnt/fpga.d/ACQ2106_TOP_09_09_09_09_41_6B_9011_32B_WR-PG.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_09_09_09_09_41_6B_9011_32B_WR.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_09_09_09_09_41_6B_9011_32B_WR_UDP.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_09_09_41_7B_7B_6B_9011_32B_WR_UDP.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_41_41_41_41_61_6B_9011-PWM.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_41_41_41_41_61_6B_9011-PWMFAST.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_41_41_41_41_61_6B_9011-PWMPROG.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_41_41_41_41_61_6B_9011_32B_WR-PWMPROG.bit.gz
+/mnt/fpga.d/ACQ2106_TOP_41_41_41_41_61_6B_9011_WR-PG.bit.gz
+
+
+Let's assume we pick two personalities:
+1. ACQ465 in sites 1,2,3,4 AO424 in 5, DIO482 in 6
+2. ACQ435 in sites 1,2,3,4 AO424 in 5, DIO482 in 6
+
+The files would be:
+/mnt/fpga.d/ACQ2206_TOP_02_02_02_02_41_6B_COMMS_EXTRA
+and
+/mnt/fpga.d/ACQ2206_TOP_0A_0A_0A_0A_41_6B_COMMS_EXTRA
+\end{lstlisting}
 
 \end{document}

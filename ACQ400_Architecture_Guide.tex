@@ -57,10 +57,10 @@
 
 The ACQ400 Architecture is a firmware framework used by all D-TACQ “4G” DAQ Appliances, based on the ZYNQ-7000 platform, including
 \begin{enumerate}
-	\item Compact DAQ Appliances: \href{http://www.d-tacq.com/resources/d-tacq-4G-acq4xx-UserGuide-r28.pdf}{ACQ1001, ACQ1002, ACQ1014}
-	\item Mainframe DAQ Appliances: \href{http://www.d-tacq.com/resources/Bolo_calibration_report_user-guide.pdf}{ACQ2006, ACQ2106, ACQ2206}
-	\item MTCA:  \href{https://github.com/seanalsop/bolodsp-doc/releases}{KMCU-Z30, Z7IO}
-	\item Custom: \href{https://github.com/seanalsop/bolodsp-doc/releases}{CPSC2}
+	\item Compact DAQ Appliances: \href{https://www.d-tacq.com/acq1001Q.shtml}{ACQ1001}, \href{https://www.d-tacq.com/acq1002R.shtml}{ACQ1002}, \href{https://www.d-tacq.com/acq1014.shtml}{ACQ1014}
+	\item Mainframe DAQ Appliances: \href{https://www.d-tacq.com/acq2106.shtml}{ACQ2106},  \href{https://www.d-tacq.com/acq2206.shtml}{ACQ2206}
+	\item MTCA:  \href{https://www.d-tacq.com/mtca.shtml}{KMCU-Z30}, \href{https://innovation.desy.de/technologies/microtca/boards/damc_fmc1z7io/index_eng.html}{Z7IO}
+	\item Custom: \href{https://www.d-tacq.com/news48.shtml}{CPSC2}
 \end{enumerate}
 
 This document describes the structure of the Embedded Software ESW in 3 levels of detail
@@ -84,13 +84,12 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 
 \subsection{Glossary}
 \begin{enumerate}
-    \item ACQ400 Embedded Software
-    \item excludes FPGA development.
-    • DAQ Appliance: a freestanding networked data acquisition system
-    \item ZYNQ 7000 (Z7)  : Xilinx system on chip architecture.
-    \item PS : Processor System in ZYNQ7000
-    \item PL : Programmable Logic (FPGA part) of ZYNQ7000
-    \item A9 : Dual Core ARM A9 processor found in ZYNQ7000, the processor in PS
+    \item ACQ400 Embedded Software, excludes FPGA development.
+    \item DAQ Appliance: a freestanding networked data acquisition system
+    \item ZYNQ 7000 (Z7, Z7000)  : Xilinx system on chip architecture.
+    \item PS : Processor System in Z7000
+    \item PL : Programmable Logic (FPGA part) of Z7000
+    \item A9 : Dual Core ARM A9 processor found in Z7000, the processor in PS
     \item ESW : Embedded SoftWare : software to run on the A9
     \item Gateware: programmable logic for the PL. This is delivered as an 
     \item FPGA Personality file.
@@ -98,7 +97,7 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
     \item FMC: Vita 57 standard for expansion modules
     \item ELF : D-TACQ extension of FMC : Analog module uses a limited subset of FMC I/O, optional larger size module, to allow a larger analog payload while at the same time using less FPGA pin resource.
     \item Carrier/Motherbord: Electronic circuit board with Z7000 SOC, DRAM, Networking and one or more FMC or ELF payload sites.
-    \item QPSI Flash: flash memory in the Z7 system, typically used for customization and robust bootloader storage.       
+    \item QSPI Flash: FLASH memory in the Z7000 system, typically used for customization and robust bootloader storage.       
 \end{enumerate}
 
 \subsection{References}

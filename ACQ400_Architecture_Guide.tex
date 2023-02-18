@@ -11,6 +11,10 @@
 
 \import{../../}{dtacq_doc_style} % Import general document options, custom colours, etc.
 \import{../../}{dtacq_code_styles} % Import code styles
+
+
+
+%\usepackage{booktabs}
 \usepackage{underscore}   % breaks FAT if in dtacq_doc_style!
 
 % Override standard font
@@ -53,7 +57,7 @@
 
 \section{Introduction}
 
-\subsection{ACQ400 Architecture}
+\subsection{ACQ400 Architecture}\label{sec:daq-appliances}
 
 The ACQ400 Architecture is a firmware framework used by all D-TACQ “4G” DAQ Appliances, based on the ZYNQ-7000 platform, including
 \begin{enumerate}
@@ -115,7 +119,7 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 \section{Overview}
 
 \subsection{Single Software Image, Multiple FPGA Personalities}
-The ACQ400 firmware system runs on about 10 carrier platforms 1.1, supporting a wide range (>10) analog payload modules.  Each hardware combination of modules and sites, is supported by a unique FPGA personality~\ref{sec:fpga-personalities}. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
+The ACQ400 firmware system runs on about 10 carrier platforms~\ref{sec:daq-appliances}, supporting a wide range (>10) analog payload \href{https://www.d-tacq.com/modproducts_modules.shtml}{modules}.  Each hardware combination of modules and sites, is supported by a unique FPGA personality~\ref{sec:fpga-personalities}. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
 
 \subsection{Embedded Linux System}
 The ACQ400 system runs Linux. A single Linux image supports all variants. This is the standard Linux kernel, and a fairly conventional userland, with two exceptions:
@@ -265,7 +269,8 @@ Systems may be customized by installing “nn-custom_PACKAGE modules.
 The SD card appears in the booted linux system as /mnt
 
 \begin{tabular}{|c|c|}
-\hline 
+File & Description \\
+\hline\hline
 /mnt/ko & mountable file system images eg  \\ 
 \hline 
 fpga-511-yymmdd.img & FPGA STOCK \\ 
@@ -419,9 +424,7 @@ C     D-TACQ Solutions          MGT483                MGT483-SFP4 N=3 M=90      
 
 # If a site has no module, then it's a wildcard match.
 \end{lstlisting}
-
-
-
+\pagebreak
 \begin{lstlisting}[style=bashstyle,frame=single]
 # eg what support for ACQ435 do we already have?
 acq2206_001> find /mnt/fpga.d -type f -print | grep ACQ2106 | grep 02
@@ -459,5 +462,8 @@ The files would be:
 and
 /mnt/fpga.d/ACQ2206_TOP_0A_0A_0A_0A_41_6B_COMMS_EXTRA
 \end{lstlisting}
+
+%\usepackage{docmute}
+%\include{module_ids.tex}
 
 \end{document}

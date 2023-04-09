@@ -13,6 +13,8 @@
 \import{../../}{dtacq_code_styles} % Import code styles
 
 \newcommand{\glossy}[1]{{\color{blue}\itshape #1}}
+\newcommand{\pcmd}[1]{{\bfseries\ttfamily #1}}
+\newcommand{\pftxt}[1]{{\ttfamily #1}}
 
 %\usepackage{booktabs}
 \usepackage{underscore}   % breaks FAT if in dtacq_doc_style!
@@ -111,8 +113,8 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 
 \subsection{Notation}
 \begin{enumerate}
-    \item command   : indicates name of a program (command)
-    \item preformatted text : literal input or output from terminal session.
+    \item \pcmd{command}  : indicates name of a program (command)
+    \item \pftxt{preformatted text} : literal input or output from terminal session.
     \item \glossy{Defined Term} : some term or acronym specific to this domain (perhaps referenced in the glossary)
 \end{enumerate} 
 
@@ -172,8 +174,8 @@ The initial filesystem image, with limited functionality, this provides the firs
 \subsubsection{devicetree}
 This is a data structure that defines the architecture of the particular motherboard, and any customisations.
 \begin{enumerate}
-    \item eg ACQ1001 or ACQ2106, dtb.d/acq1001.dtb, dtb.d/acq2106.dtb
-    \item eg ACQ2106 (no sfp) or ACQ2106sfp (with sfp)., dtb/acq2106.dtb, dtb.d/acq2106sfp.dtb
+    \item eg ACQ1001 or ACQ2106: \pftxt{dtb.d/acq1001.dtb}, \pftxt{dtb.d/acq2106.dtb}
+    \item eg ACQ2106 (no sfp) or ACQ2106sfp (with sfp)., \pftxt{dtb/acq2106.dtb}, \pftxt{dtb.d/acq2106sfp.dtb}
 \end{enumerate}
 The boot-time dveicetree may be augmented later in the boot-sequence by "devicetree-overlays", that define additional devices once more is known about the system.
 
@@ -190,6 +192,18 @@ These are read-only file system images mounted onto the ramdisk, and most of the
 
 \subsubsection{Packages}
 \glossy{ACQ400} uses a sequenced set of packages to configure the system; packages are tarballs that are expanded onto the ramdisk in sequence, together with initialisation files that are used to instantiate the entire system. Packages may reference overlays to save RAM, and they may load devicetree-overlays to instantiate new devices.
+A package is a tarball:
+\pftxt{SEQ-NAME-YYMMDD.tgz}
+\begin{enumerate}
+	\item \pftxt{SEQ}	:  SEQuence number 01..99 : defines the order that the package is installed
+	\item \pftxt{NAME}	:  NAME must be unique
+	\item \pftxt{YYMMDD}:   Date code for versioning
+\end{enumerate}
+The tarball may contain:
+\begin{enumerate}
+	\item \pftxt{files/to/install}   : files are copied to the RAMDISK
+	\item \pftxt{/usr/local/init/\pcmd{NAME.init}} : after the copy, this intialization file is run
+\end{enumerate}
 
 \subsection{SD Boot or QSPI boot}
 Z7 systems typically have a jumper setting to boot from SD (certainly, for all newly assembled units), or from QSPI (soldered flash). On D-TACQ motherboards, initial boot is from SD, then the QSPI is programmed, and the jumper set to QSPI boot.
@@ -228,7 +242,7 @@ This is a standard Linux ARM kernel boot up, the Linux system is configured, and
 Finally uImage sets up the initrd and hands over to userland.
 
 \subsubsection{initrd}
-The init system runs /etc/init.d/rcS, a highly customized script that will
+The init system runs \pftxt{/etc/init.d/\pcmd{rcS}}, a highly customized script that will
 \begin{enumerate}
     \item mount the rootfs file system
     \item perform any custom network configuration
@@ -236,10 +250,10 @@ The init system runs /etc/init.d/rcS, a highly customized script that will
 \end{enumerate}
 
 \subsubsection{packages}
-This is the real DAQ Appliance application userland, discussed in more detail in the next section.
+This is the real DAQ Appliance application userland. 
 
 \subsubsection{/mnt/local/rc.user}
-Last to run is the file /mnt/local/rc.user, this contains final factory and/or user customisation. rc.user can be configured to make a completely turnkey system.
+Last to run is the file \pftxt{/mnt/local/\pcmd{rc.user}}, this contains final factory and/or user customisation. \pcmd{rc.user} can be configured to make a completely turnkey system.
 
 \subsection{Package Sequence}
 

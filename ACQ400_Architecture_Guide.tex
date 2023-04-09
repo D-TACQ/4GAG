@@ -12,7 +12,7 @@
 \import{../../}{dtacq_doc_style} % Import general document options, custom colours, etc.
 \import{../../}{dtacq_code_styles} % Import code styles
 
-
+\newcommand{\glossy}[1]{{\color{blue}\itshape #1}}
 
 %\usepackage{booktabs}
 \usepackage{underscore}   % breaks FAT if in dtacq_doc_style!
@@ -88,20 +88,20 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 
 \subsection{Glossary}
 \begin{enumerate}
-    \item ACQ400 Embedded Software, excludes FPGA development.
-    \item DAQ Appliance: a freestanding networked data acquisition system
-    \item ZYNQ 7000 (Z7, Z7000)  : Xilinx system on chip architecture.
-    \item PS : Processor System in Z7000
-    \item PL : Programmable Logic (FPGA part) of Z7000
-    \item A9 : Dual Core ARM A9 processor found in Z7000, the processor in PS
-    \item ESW : Embedded SoftWare : software to run on the A9
-    \item Gateware: programmable logic for the PL. This is delivered as an 
-    \item FPGA Personality file.
-    \item Firmware Release: combination of all ESW and Gateware needed to run an ACQ400 System..
-    \item FMC: Vita 57 standard for expansion modules
-    \item ELF : D-TACQ extension of FMC : Analog module uses a limited subset of FMC I/O, optional larger size module, to allow a larger analog payload while at the same time using less FPGA pin resource.
-    \item Carrier/Motherbord: Electronic circuit board with Z7000 SOC, DRAM, Networking and one or more FMC or ELF payload sites.
-    \item QSPI Flash: FLASH memory in the Z7000 system, typically used for customization and robust bootloader storage.       
+    \item \glossy{ACQ400} Embedded Software, excludes FPGA development.
+    \item \glossy{DAQ Appliance}: a freestanding networked data acquisition system
+    \item \glossy{ZYNQ 7000} (Z7, Z7000)  : Xilinx system on chip architecture.
+    \item \glossy{PS} : Processor System in Z7000
+    \item \glossy{PL} : Programmable Logic (FPGA part) of Z7000
+    \item \glossy{A9} : Dual Core ARM A9 processor found in Z7000, the processor in PS
+    \item \glossy{ESW} : Embedded SoftWare : software to run on the A9
+    \item \glossy{Gateware}: programmable logic for the PL. This is delivered as an 
+    \item \glossy{FPGA} Personality file.
+    \item \glossy{Firmware Release}: combination of all ESW and Gateware needed to run an ACQ400 System..
+    \item \glossy{FMC}: Vita 57 standard for expansion modules
+    \item \glossy{ELF} : D-TACQ extension of FMC : Analog module uses a limited subset of FMC I/O, optional larger size module, to allow a larger analog payload while at the same time using less FPGA pin resource.
+    \item \glossy{Carrier/Motherboard/MB}: Electronic circuit board with Z7000 SOC, DRAM, Networking and one or more FMC or ELF payload sites.
+    \item \glossy{QSPI Flash}: FLASH memory in the Z7000 system, typically used for customization and robust bootloader storage.       
 \end{enumerate}
 
 \subsection{References}
@@ -113,16 +113,16 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 \begin{enumerate}
     \item command   : indicates name of a program (command)
     \item preformatted text : literal input or output from terminal session.
-    \item Defined Term : some term or acronym specific to this domain (perhaps referenced in the glossary)
+    \item \glossy{Defined Term} : some term or acronym specific to this domain (perhaps referenced in the glossary)
 \end{enumerate} 
 
 \section{Overview}
 
 \subsection{Single Software Image, Multiple FPGA Personalities}
-The ACQ400 firmware system runs on about 10 carrier platforms~\ref{sec:daq-appliances}, supporting a wide range (>10) analog payload \href{https://www.d-tacq.com/modproducts_modules.shtml}{modules}.  Each hardware combination of modules and sites, is supported by a unique FPGA personality~\ref{sec:fpga-personalities}. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
+The \glossy{ACQ400} firmware system runs on about 10 carrier platforms~\ref{sec:daq-appliances}, supporting a wide range (>10) analog payload \href{https://www.d-tacq.com/modproducts_modules.shtml}{modules}.  Each hardware combination of modules and sites, is supported by a unique FPGA personality~\ref{sec:fpga-personalities}. A single software image may handle all platforms (excepting CPSC2, which has a forked image).
 
 \subsection{Embedded Linux System}
-The ACQ400 system runs Linux. A single Linux image supports all variants. This is the standard Linux kernel, and a fairly conventional userland, with two exceptions:
+The \glossy{ACQ400} system runs Linux. A single Linux image supports all variants. This is the standard Linux kernel, and a fairly conventional userland, with two exceptions:
 \begin{enumerate}
     \item Kernel DMA subsystem is non-standard.
     \item The system root file system rootfs is a RAMDISK. 
@@ -133,14 +133,14 @@ The RAMDISK rootfs is chosen for
     \item Robustness: the file system is volatile, and the entire system may be reset or powered off at any time during operation. 
     \item Realtime performance: the DAQ appliance is a real time system, and must not be subject to any unpredictable delay eg disk access, or swapping.
 \end{enumerate} 
-The ZYNQ7000 has strictly limited DRAM: 1GB. In addition, ACQ400 systems, being aimed at large scale data collection, typically assign at least half the DRAM to data buffers. So this is a restricted memory environment, and the size of the RAMDISK must therefore be kept in bounds.
+The \glossy{ZYNQ 7000} has strictly limited DRAM: 1GB. In addition, \glossy{ACQ400} systems, being aimed at large scale data collection, typically assign at least half the DRAM to data buffers. So this is a restricted memory environment, and the size of the RAMDISK must therefore be kept in bounds.
 The systems are typically fitted with an SD card, and the system boots from the SD card.
 
 \begin{enumerate}
     \item The SD card is treated as a ROM. There’s no writeable access to the SD card at runtime on a production system.
     \item However, the SD card is writeable, this is convenient for system maintenance and for firmware upgrade.  After deployment, there should be no files opened for write while the unit is deployed, so it’s still safe to cut the power at any time.
 \end{enumerate} 
-The RAMDISK isn’t ideal for a limited memory system, and a pure ramdisk system (such as D-TACQ ACQ200) has a very limited userland. ACQ400 has a rich user-land, based on Buildroot. Each ACQ400 system also carries a large inventory (can be 100+) of FPGA personalities. ACQ400 handles this by mounting additional read-only file systems from file images on the SD card. The OS then has access to a wide range of software images, loaded on demand. In a typical system, most of this functionality is swapped out at runtime, preserving DRAM.
+The RAMDISK isn’t ideal for a limited memory system, and a pure ramdisk system (such as D-TACQ ACQ200) has a very limited userland. \glossy{ACQ400} has a rich user-land, based on Buildroot. Each \glossy{ACQ400} system also carries a large inventory (can be 100+) of FPGA personalities. \glossy{ACQ400} handles this by mounting additional read-only file systems from file images on the SD card. The OS then has access to a wide range of software images, loaded on demand. In a typical system, most of this functionality is swapped out at runtime, preserving DRAM.
 Most systems are SD based, however two types of netboot systems are also supported:
 \begin{enumerate}
     \item Pure TFTP : the entire system boots from a RAMDISK image loaded via TFTP. This has a limited userland, and it does depend on a TFTP server for boot, but once running is self-standing and extremely robust. CPSC2 is the main example of this method.
@@ -149,14 +149,14 @@ Most systems are SD based, however two types of netboot systems are also support
 
 \subsection{Self Identifying System}
 \begin{enumerate}
-    \item On boot, ESW will identify which motherboard it is running on.
+    \item On boot, \glossy{ESW} will identify which motherboard it is running on.
     \item Then it will use SMB (i2c) to identify the current payload 
         	ie which analog modules are present in the module sites
     \item The system will then select the first available FPGA personality, and load the FPGA
     \item The system then proceeds to load kernel modules, instantiate device drivers and all services needed to build the system.
 \end{enumerate}
-=> The same ESW image can run any supported personality, based on runtime identification.
-Z7IO: currently, the ESW is not able to complete system indentification before loading the FPGA, so this is selected at boot time.
+=> The same \glossy{ESW} image can run any supported personality, based on runtime identification.
+Z7IO: currently, the \glossy{ESW} is not able to complete system indentification before loading the FPGA, so this is selected at boot time.
 
 \subsection{ESW Components}
 
@@ -189,7 +189,7 @@ These are read-only file system images mounted onto the ramdisk, and most of the
 \end{enumerate}
 
 \subsubsection{Packages}
-ACQ400 uses a sequenced set of packages to configure the system; packages are tarballs that are expanded onto the ramdisk in sequence, together with initialisation files that are used to instantiate the entire system. Packages may reference overlays to save RAM, and they may load devicetree-overlays to instantiate new devices.
+\glossy{ACQ400} uses a sequenced set of packages to configure the system; packages are tarballs that are expanded onto the ramdisk in sequence, together with initialisation files that are used to instantiate the entire system. Packages may reference overlays to save RAM, and they may load devicetree-overlays to instantiate new devices.
 
 \subsection{SD Boot or QSPI boot}
 Z7 systems typically have a jumper setting to boot from SD (certainly, for all newly assembled units), or from QSPI (soldered flash). On D-TACQ motherboards, initial boot is from SD, then the QSPI is programmed, and the jumper set to QSPI boot.
@@ -252,7 +252,7 @@ Machine-specific setup eg 05-acq1001-yymmdd.tgz
 In particular, this will enumerate the site payload modules, select an FPGA personality and load the FPGA~\ref{sec:fpga-personalities}.
 
 \subsubsection{10-acq420}
-This is the main device driver and operating code of the ACQ400 system.
+This is the main device driver and operating code of the \glossy{ACQ400} system.
 Once the FPGA has been loaded, then the core device driver acq420fmc.ko is loaded, and this instantiates a Linux device per site, bringing up all site services, and loading associated kernel modules, notably to instantiate DMA controllers. The package also provides acq400stream, the main data-moving application.
 
 \subsubsection{20-httpd}
@@ -337,6 +337,25 @@ z7io has NO unit-specific customization in the u-boot environment. Instead, the 
 
 \section{Developer Guide}
 
+\subsection{Build ESW}
+
+\subsubsection{ESW}
+The entire \glossy{ACQ400} \glossy{ESW} software suite is Open Source, and is presented by a single git top level archive with submodules:
+\href{https://github.com/D-TACQ/ACQ400_ESW_TOP.git}{ACQ400_ESW_TOP}
+ and may be built from scratch by following these 
+\href{https://github.com/D-TACQ/ACQ400_ESW_TOP/blob/main/README.md}{build instructions}
+
+
+\subsubsection{Making a Complete Firmware Release}
+A complete bootable SD card image may be assembled as foloows
+\begin{enumerate}
+	\item Build \glossy{ESW}
+	\item Include appropriate BOOT.BIN if needed
+	\item Include appropriate FPGA filesystem image.
+	\item Package and deploy the release
+\end{enumerate}
+
+
 \subsection{BOOT.BIN}
 
 \subsubsection{z7io}
@@ -362,7 +381,7 @@ For example:
 	\item DIO482 has M=6B
 \end{enumerate}
 
-You can see the current stock of personalities on any ACQ400 unit, in /mnt/fpga.d
+You can see the current stock of personalities on any \glossy{ACQ400} unit, in /mnt/fpga.d
 
 \begin{lstlisting}[style=bashstyle,frame=single]
 # 162 personalities in stock!

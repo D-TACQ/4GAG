@@ -12,10 +12,6 @@
 \import{../../}{dtacq_doc_style} % Import general document options, custom colours, etc.
 \import{../../}{dtacq_code_styles} % Import code styles
 
-\newcommand{\glossy}[1]{{\color{blue}\itshape #1}}
-\newcommand{\pcmd}[1]{{\bfseries\ttfamily #1}}
-\newcommand{\pftxt}[1]{{\ttfamily #1}}
-
 %\usepackage{booktabs}
 \usepackage{underscore}   % breaks FAT if in dtacq_doc_style!
 
@@ -103,7 +99,8 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
     \item \glossy{FMC}: Vita 57 standard for expansion modules
     \item \glossy{ELF} : D-TACQ extension of FMC : Analog module uses a limited subset of FMC I/O, optional larger size module, to allow a larger analog payload while at the same time using less FPGA pin resource.
     \item \glossy{Carrier/Motherboard/MB}: Electronic circuit board with Z7000 SOC, DRAM, Networking and one or more FMC or ELF payload sites.
-    \item \glossy{QSPI Flash}: FLASH memory in the Z7000 system, typically used for customization and robust bootloader storage.       
+    \item \glossy{QSPI Flash}: FLASH memory in the Z7000 system, typically used for customization and robust bootloader storage.  
+    \item \glossy{MGT}: Multi Gigabit Transceiver links - ACQ2106:4x6Gbps, ACQ2206:4x10Gbps.
 \end{enumerate}
 
 \subsection{References}
@@ -118,6 +115,7 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
     \item \glossy{Defined Term} : some term or acronym specific to this domain (perhaps referenced in the glossary)
 \end{enumerate} 
 
+\pagebreak
 \section{Overview}
 
 \subsection{Single Software Image, Multiple FPGA Personalities}
@@ -159,6 +157,134 @@ Most systems are SD based, however two types of netboot systems are also support
 \end{enumerate}
 => The same \glossy{ESW} image can run any supported personality, based on runtime identification.
 Z7IO: currently, the \glossy{ESW} is not able to complete system indentification before loading the FPGA, so this is selected at boot time.
+
+\subsection{Device Driver and Memory Map}
+The system hardware bus layout and memory map is defined by the devicetree.
+
+\subsubsection{I2C Devices}
+I2C/SMB is used extensively, not least for module identification and monitoring as well as slow control (eg gain setting).
+The i2C bus layout is defined 
+\begin{enumerate}
+    \item statically in the main boot time devicetree  
+    \item dynamically during system enumeration, either by
+    \begin{enumerate}
+	\item loading custom kernel modules that define the devices directly (old method).
+	\item loading devicetree overlays (new method).
+    \end{enumerate}	
+\end{enumerate}
+
+Example i2c bus layout (ACQ2206):
+
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+acq2206_001> ls  /sys/bus/i2c/devices/ | grep -v ^i2c | sort -n
+i2c-0		# root
+i2c-1		# Site0 : motherboard
+i2c-2		# Site1
+i2c-3		# Site2
+i2c-4		# Site3
+i2c-5		# Site4
+i2c-6		# Site5
+i2c-7		# Site6
+i2c-8		# MGT482 root
+i2c-9		# MGT482 expansion
+i2c-10
+i2c-11
+i2c-12
+i2c-13
+i2c-14
+i2c-15
+i2c-16
+
+\end{lstlisting}
+
+\subsubsection{AXI Bus Devices for control}
+The FPGA instantiates an AXI bus memory mapping, and this is preconfigured into logical device areas, notably by module site
+
+Example from ACQ2206, 2 sites present.
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+cat /proc/iomem
+40000000-4000ffff : /amba/acq2006sc@40000000	# Site0
+40010000-4001ffff : /amba/acq400fmc@40010000	# Site1
+40020000-4002ffff : /amba/acq400fmc@40020000	# Site2
+400c0000-400cffff : mgt400.B			# CommsB
+400d0000-400dffff : mgt400.A			# CommsA
+801f0000-801fffff : /amba/axidma@801f0000	# AXI DMA
+\end{lstlisting}
+
+\subsubsection{AXI Bus Devices for DMA}
+The \glossy{ACQ400} system makes extensive use of DMA for moving data at high rates. The system supports the following DMA engines
+\begin{enumerate}
+    \item pl330 DMAC : a hard-core DMA in the Z7000 (low rate, legacy apps)  
+    \item AXI32 : 32 bit AXI DMA instantiated in PS, for lower rate systems, back-compatibility with pl330
+    \item AXI64 : 64 bit AXI DMA instantiated in PS, for high rate systems (to 960MB/s)
+    \item 2D AXI64 : 2x 64 bit AXI DMA instantiated in PS, for very high rate systems (to 1920MB/s)
+    \item COMMS : DMA engines configured to control data transfer on \glossy{MGT}
+\end{enumerate}
+
+\subsubsection{FPGA Device Drivers}
+\begin{enumerate}
+	\item acq420fmc.ko : main device driver, one driver works for all motherboards (Site 0) and all payloads (Site1-6).
+	\item mgt400.ko    : device driver for ACQ483, handles comms DMAC.
+	\item acq400_dspfs : instantiates a user-programmable register map for expansion DSP.
+\end{enumerate}
+The acq420fmc.ko device driver functions are:
+\begin{enumerate}
+	\item map each memory region according to the devices that are fitted.
+	\item identify each site payload and instantiate init, run, stop routines as appropriate, usually run from char device driver entries
+	\item create a set of knobs for each payload (a sysfs control for each programmable element).
+	\item realtime buffer management for data flow during capture/replay.
+\end{enumerate}
+The site knobs appear like this:
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+acq2206_001> ls -1 /dev/acq400.0.knobs/
+AXI_DMA_len
+..
+data32
+data_engine_0
+data_engine_1
+.
+dist_bufferlen
+dist_s1
+distributor
+..
+\end{lstlisting}
+
+\subsubsection{Site Services}
+Site services are published as TCP socket servers on well known ports (Site0=4220, Site1=4221).
+The site services are represented by a directory of virtual files; these can be
+\begin{enumerate}
+	\item soft links to device knobs (above)
+	\item simple ascii data files
+	\item links to shell scripts
+\end{enumerate} 
+The site server acq400_knobs scans this directory and enables the site service.
+eg
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+# dssb links to a sysfs knob, ssb is a small local file. transacq400_knobs clients are unaware..
+acq2206_001> ls -l /etc/acq400/0/ | grep ssb 
+lrwxrwxrwx    1 root     root            59 Jan  1 00:00 dssb -> /sys/module/acq420fmc/parameters/xo_distributor_sample_size
+-rw-r--r--    1 root     root             3 Jan  1 00:00 ssb
+acq2206_001> ls -l /etc/acq400/0/ | grep data | cut -c58-
+
+# data* are all links to sysfs.
+
+data32 -> /dev/acq400.0.knobs/data32
+data_engine_0 -> /dev/acq400.0.knobs/data_engine_0
+data_engine_1 -> /dev/acq400.0.knobs/data_engine_1
+data_engine_2 -> /dev/acq400.0.knobs/data_engine_2
+data_engine_3 -> /dev/acq400.0.knobs/data_engine_3
+
+# *FREQ are links to EPICS CA values, transparent to client0
+acq2206_001> ls -l /etc/acq400/0/ | grep FREQ | cut -c58-
+SIG:CLK_EXT:FREQ -> /usr/local/bin/caget_acq2206_001:0
+SIG:CLK_MB:FREQ -> /usr/local/bin/caget_acq2206_001:0
+SIG:CLK_S1:FREQ -> /usr/local/bin/caget_acq2206_001:0
+SIG:CLK_S2:FREQ -> /usr/local/bin/caget_acq2206_001:0
+SIG:CLK_S3:FREQ -> /usr/local/bin/caget_acq2206_001:0
+SIG:CLK_S4:FREQ -> /usr/local/bin/caget_acq2206_001:0
+..
+\end{lstlisting}
+
 
 \subsection{ESW Components}
 
@@ -262,7 +388,7 @@ Last to run is the file \pftxt{/mnt/local/\pcmd{rc.user}}, this contains final f
 Basic setup common to all platforms.
 
 \subsubsection{05-machine}
-Machine-specific setup eg 05-acq1001-yymmdd.tgz
+Machine-specific setup eg \pftxt{05-acq1001-yymmdd.tgz}.
 In particular, this will enumerate the site payload modules, select an FPGA personality and load the FPGA~\ref{sec:fpga-personalities}.
 
 \subsubsection{10-acq420}
@@ -335,20 +461,97 @@ This is a “PROMOTED” fpga image - provided this image is compatible with the
     \item Promoted: when the stock contains multiple compatible images, and we want to force a particular personality to load eg: DEC10 filter.
 \end{enumerate}
 
+\pagebreak
 \section{User/SystemIntegrator Guide}
 
 \subsection{u-boot environment}
 
+\subsubsection{acqXXX factory settings}
+
+The u-boot environment of ACQ products are customised at the factory on assembly.
+All unit ID, the serial number, mac addresses are held in u-boot environment.
+
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+acq2206_001> cat /tmp/u-boot_env 
+# Kernel command line
+bootargs="console=ttyPS0,115200 root=/dev/ram rw earlyprintk hostname=acq2206_001" 
+# u-boot boot mode
+bootcmd="run sdboot"
+bootdelay="3"
+
+# Device tree selection: has large effect on boot time customisation
+devicetree_image="dtb.d/acq2206sfp.dtb"
+# Audit trail for this customisation
+dtenvid="root@rpi-008 R1010 Fri Jan 27 14:29:53 UTC 2023"
+dtsn="CE4260001"						# serial number
+eth1addr="00:21:54:24:00:01"					# ethernet mac addresses
+eth2addr="00:21:54:34:00:01"
+ethaddr="00:21:54:14:00:01"
+fdt_high="0x20000000"
+hn="hostname=acq2206_001"					# hostname
+kernel_image="uImage"						# boot this kernel
+modeboot="sdboot"
+ramdisk_image="uramdisk.image.gz"				# with this ramdisk
+\end{lstlisting}
+
+
 \subsubsection{z7io}
+The z7io u-boot environment from DESY must be altered to boot ACQ400.
 z7io has NO unit-specific customization in the u-boot environment. Instead, the z7io u-boot reads the eth0 MAC address from a soldered PROM.
 
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+bootargs=earlyprintk console ttyPS0,115200 root=/dev/mmcblk0p2 rw rootwait
+bootargs_acq400=earlyprintk console=ttyPS0,115200 root=/dev/ram rw rootwait
+bootcmd=run sdboot
+bootkernel=run loadkernel && run loaddtb && bootm ${kernel_load_address} - ${devicetree_load_address}
+devicetree_acq400=dtb.d/z7io.dtb
+devicetree_load_address=0x2000000
+kernel_acq400=uImage
+kernel_image=uImage
+kernel_load_address=0x2080000
+loaddtb=fatload mmc 0 ${devicetree_load_address} ${devicetree_image}
+loadfpga=fatload mmc 0 ${bitstream_load_address} ${bitstream_image} && fpga ${bitstream_type} 0 ${bitstream_load_address} ${filesize}
+loadkernel=fatload mmc 0 ${kernel_load_address} ${kernel_image}
+machine_name=damc-fmc1z7io
+mfr=DESY
+ramdisk_acq400=uramdisk.image.gz
+sdboot=setenv bootargs ${bootargs_acq400} && echo Copying Linux from SD to RAM... && mmcinfo && fatload mmc 0 0x3000000 ${kernel_acq400} && fatload mmc 0 0x2A00000 ${devicetree_acq400} && fatload mmc 0 0x2000000 ${ramdisk_acq400} && bootm 0x3000000 0x2000000 0x2A00000
+uenvboot=run uenvcmd
+uenvcmd=run loadfpga && run bootkernel
+\end{lstlisting}
+
 \subsection{kernel options}
+Specified with \pftxt{\$\{bootargs\}} in the u-boot environment. No further customisation is required.
 
-
+\pagebreak
 \subsection{userland options}
 
-\subsection{packages}
+Sysconfig is pre-configured according to application at the factory
 
+\begin{lstlisting}[language=bash,style=bashstyle,frame=single]
+
+acq2206_001> ls -1 /mnt/local
+acq420_custom			# pre-customisation for device driver load
+rc.user				# final stage boot customisation
+wr_cal				# White Rabbit calibration
+wrc.le.bin			# White Rabbit firmware
+
+acq2206_001> ls -R1 /mnt/local/sysconfig/
+acq400.sh			# sets major parameters like NBUF, BLEN
+bos.sh				# long transient limits
+epics.sh			# EPICS customisation
+site-1-peers			# peers
+transient.init			# early stage customisation
+wr.sh				# White Rabbit variables
+
+ls /mnt/local/cal
+E4ssssssss.xml			# module calibration files.
+\end{lstlisting}
+
+\subsection{packages}
+Optional packages can be enabled by \pcmd{mv} ing them from \pftxt{/mnt/packages.opt} to \pftxt{/mnt/packages}
+
+\pagebreak
 \section{Developer Guide}
 
 \subsection{Build ESW}
@@ -361,7 +564,7 @@ The entire \glossy{ACQ400} \glossy{ESW} software suite is Open Source, and is pr
 
 
 \subsubsection{Making a Complete Firmware Release}
-A complete bootable SD card image may be assembled as foloows
+A complete bootable SD card image may be assembled as follows:
 \begin{enumerate}
 	\item Build \glossy{ESW}
 	\item Include appropriate BOOT.BIN if needed

@@ -88,14 +88,14 @@ This document describes the structure of the Embedded Software ESW in 3 levels o
 \begin{enumerate}
     \item \glossy{ACQ400} Embedded Software, excludes FPGA development.
     \item \glossy{DAQ Appliance}: a freestanding networked data acquisition system
-    \item \glossy{ZYNQ 7000} (Z7, Z7000)  : Xilinx system on chip architecture.
-    \item \glossy{PS} : Processor System in Z7000
-    \item \glossy{PL} : Programmable Logic (FPGA part) of Z7000
-    \item \glossy{A9} : Dual Core ARM A9 processor found in Z7000, the processor in PS
-    \item \glossy{ESW} : Embedded SoftWare : software to run on the A9
-    \item \glossy{Gateware}: programmable logic for the PL. This is delivered as an 
-    \item \glossy{FPGA} Personality file.
-    \item \glossy{Firmware Release}: combination of all ESW and Gateware needed to run an ACQ400 System..
+    \item \glossy{ZYNQ 7000} (Z7, Z7000)  : Xilinx(R) system on chip architecture.
+    \item \glossy{PS} : Processor System in \glossy{Z7000}
+    \item \glossy{PL} : Programmable Logic (FPGA part) of \glossy{Z7000}
+    \item \glossy{A9} : Dual Core ARM A9 processor found in  \glossy{Z7000}, the processor in \glossy{PS}
+    \item \glossy{ESW} : Embedded SoftWare : software to run on the \glossy{A9}
+    \item \glossy{Gateware}: programmable logic for the \glossy{PL}. This is delivered as an 
+    \item \glossy{FPGA Personality} file.
+    \item \glossy{Firmware Release}: combination of all \glossy{ESW} and \glossy{Gateware} needed to run an \glossy{ACQ400} System..
     \item \glossy{FMC}: Vita 57 standard for expansion modules
     \item \glossy{ELF} : D-TACQ extension of FMC : Analog module uses a limited subset of FMC I/O, optional larger size module, to allow a larger analog payload while at the same time using less FPGA pin resource.
     \item \glossy{Carrier/Motherboard/MB}: Electronic circuit board with Z7000 SOC, DRAM, Networking and one or more FMC or ELF payload sites.
@@ -214,20 +214,20 @@ cat /proc/iomem
 \subsubsection{AXI Bus Devices for DMA}
 The \glossy{ACQ400} system makes extensive use of DMA for moving data at high rates. The system supports the following DMA engines
 \begin{enumerate}
-    \item pl330 DMAC : a hard-core DMA in the Z7000 (low rate, legacy apps)  
-    \item AXI32 : 32 bit AXI DMA instantiated in PS, for lower rate systems, back-compatibility with pl330
-    \item AXI64 : 64 bit AXI DMA instantiated in PS, for high rate systems (to 960MB/s)
-    \item 2D AXI64 : 2x 64 bit AXI DMA instantiated in PS, for very high rate systems (to 1920MB/s)
+    \item pl330 : a hard-core DMA in the \glossy{Z7000} (low rate, legacy apps)  
+    \item AXI32 : 32 bit \glossy{AXI} DMA instantiated in \glossy{PS}, for lower rate systems, back-compatibility with pl330
+    \item AXI64 : 64 bit \glossy{AXI} DMA instantiated in \glossy{PS}, for high rate systems (to 960MB/s)
+    \item 2D AXI64 : 2x 64 bit \glossy{AXI} DMA instantiated in \glossy{PS}, for very high rate systems (to 1920MB/s)
     \item COMMS : DMA engines configured to control data transfer on \glossy{MGT}
 \end{enumerate}
 
 \subsubsection{FPGA Device Drivers}
 \begin{enumerate}
-	\item acq420fmc.ko : main device driver, one driver works for all motherboards (Site 0) and all payloads (Site1-6).
-	\item mgt400.ko    : device driver for ACQ483, handles comms DMAC.
-	\item acq400_dspfs : instantiates a user-programmable register map for expansion DSP.
+	\item \pftxt{acq420fmc.ko} : main device driver, one driver works for all motherboards (Site 0) and all payloads (Site1-6).
+	\item \pftxt{mgt400.ko}    : device driver for MGT48x, handles comms DMAC.
+	\item \pftxt{acq400_dspfs} : instantiates a user-programmable register map for expansion DSP.
 \end{enumerate}
-The acq420fmc.ko device driver functions are:
+The \pftxt{acq420fmc.ko} device driver functions are:
 \begin{enumerate}
 	\item map each memory region according to the devices that are fitted.
 	\item identify each site payload and instantiate init, run, stop routines as appropriate, usually run from char device driver entries
@@ -257,7 +257,7 @@ The site services are represented by a directory of virtual files; these can be
 	\item simple ascii data files
 	\item links to shell scripts
 \end{enumerate} 
-The site server acq400_knobs scans this directory and enables the site service.
+The site server \pcmd{acq400_knobs} scans this directory and enables the site service.
 eg
 \begin{lstlisting}[language=bash,style=bashstyle,frame=single]
 # dssb links to a sysfs knob, ssb is a small local file. transacq400_knobs clients are unaware..
@@ -303,7 +303,7 @@ This is a data structure that defines the architecture of the particular motherb
     \item eg ACQ1001 or ACQ2106: \pftxt{dtb.d/acq1001.dtb}, \pftxt{dtb.d/acq2106.dtb}
     \item eg ACQ2106 (no sfp) or ACQ2106sfp (with sfp)., \pftxt{dtb/acq2106.dtb}, \pftxt{dtb.d/acq2106sfp.dtb}
 \end{enumerate}
-The boot-time dveicetree may be augmented later in the boot-sequence by "devicetree-overlays", that define additional devices once more is known about the system.
+The boot-time devicetree may be augmented later in the boot-sequence by "devicetree-overlays", that define additional devices once more is known about the system.
 
 \subsubsection{rootfs.tgz}
 This is the main userland. This is created using Buildroot. This is expanded onto the SD card at install time, then mounted onto the ramdisk at run time, with the goal that most of the userland will NOT be resident in memory at runtime.
@@ -389,11 +389,11 @@ Basic setup common to all platforms.
 
 \subsubsection{05-machine}
 Machine-specific setup eg \pftxt{05-acq1001-yymmdd.tgz}.
-In particular, this will enumerate the site payload modules, select an FPGA personality and load the FPGA~\ref{sec:fpga-personalities}.
+In particular, this will enumerate the site payload modules, select an \glossy{FPGA Personality} and load the FPGA~\ref{sec:fpga-personalities}.
 
 \subsubsection{10-acq420}
 This is the main device driver and operating code of the \glossy{ACQ400} system.
-Once the FPGA has been loaded, then the core device driver acq420fmc.ko is loaded, and this instantiates a Linux device per site, bringing up all site services, and loading associated kernel modules, notably to instantiate DMA controllers. The package also provides acq400stream, the main data-moving application.
+Once the FPGA has been loaded, then the core device driver \pftxt{acq420fmc.ko} is loaded, and this instantiates a Linux device per site, bringing up all site services, and loading associated kernel modules, notably to instantiate DMA controllers. The package also provides \pcmd{acq400stream}, the main data-moving application.
 
 \subsubsection{20-httpd}
 Configures and starts the embedded webserver. The embedded webserver provides useful system observability and diagnostics.
@@ -408,37 +408,46 @@ Systems may be customized by installing “nn-custom_PACKAGE modules.
 \subsection{SD File System Layout}
 The SD card appears in the booted linux system as /mnt
 
-\begin{tabular}{|c|c|}
-File & Description \\
-\hline\hline
-/mnt/ko & mountable file system images eg  \\ 
+\begin{table}[H]
+\ttfamily
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Dir} & \textbf{File} & \textbf{Description} \\
+\hline
+/mnt/ko & & mountable file system images eg  \\ 
 \hline 
-fpga-511-yymmdd.img & FPGA STOCK \\ 
+& fpga-511-yymmdd.img & FPGA STOCK \\ 
 \hline 
-packageko-4.14.0-acq400-xilinx-yymmdd.img & kernel object STOCK \\ 
+& packageko-4.14.0-acq400 & kernel object STOCK\\&-xilinx-yymmdd.img  \\ 
 \hline 
-/mnt/packages & live packages are found here \\ 
+/mnt/packages & & live packages are found here \\ 
 \hline 
-/mnt/packages.opt & optional (inactive) packages \\ 
+/mnt/packages.opt & & optional (inactive) packages \\ 
 \hline 
-/mnt/bin & scripts for firmware upgrade \\ 
+/mnt/bin & & scripts for firmware upgrade \\ 
 \hline 
-/mnt/boot.d & BOOT.bin instances for supported carriers. \\ 
+/mnt/boot.d & & BOOT.bin instances for supported carriers. \\ 
 \hline 
-/mnt/dtb.d & stock of devicetree instances \\ 
+/mnt/dtb.d & & stock of devicetree instances \\ 
 \hline 
-/mnt/fpga.d & FPGA stock mounted here \\ 
+/mnt/fpga.d & & FPGA stock mounted here \\ 
 \hline 
-/mnt/local   & user/system customisation.. \\
+/mnt/local   & & user/system customisation.. \\
 \hline 
-/mnt/local/cal    & calibration files for current payload \\
+/mnt/local/cal & & calibration files for current payload \\
 \hline 
-/mnt/local/sysconfig  &  system customization. \\
+/mnt/local/sysconfig & &  system customization. \\
 \hline 
 \end{tabular} 
+\end{table}
+
 
 \subsection{SD card top-level files}
-\begin{tabular}{|c|c|}
+\begin{table}[H]
+\ttfamily
+\begin{tabular}{|l|l|}
+\hline	
+\textbf{File} & \textbf{Description} \\	
 \hline 
 BOOT.BIN & The specific bootloader for this carrier (for SD boot) \\ 
 \hline 
@@ -448,17 +457,18 @@ uramdisk.image.gz & The initial ramdisk initrd \\
 \hline 
 rootfs.ext2 & The root file system, to be mounted onto the ramdisk \\ 
 \hline 
-Optionally & • \\ 
+Optionally: & \\ 
 \hline 
-ACQ2106_TOP_04_ff_ff_ff_ff_ff_9011_32B_UDP.bit.gz: & Promoted FPGA Image \\ 
+ACQ2106_TOP_04_*_9011_32B_UDP.bit.gz: & Promoted \glossy{FPGA Personality} **\\ 
 \hline 
-\end{tabular} 
+\end{tabular}
+\end{table}
 
-This is a “PROMOTED” fpga image - provided this image is compatible with the module payload, it will be loaded in preference to the first compatible image in the fpga stock. This is useful for:
+** This is a “PROMOTED” \glossy{FPGA Personality} - provided this image is compatible with the module payload, it will be loaded in preference to the first compatible image in the fpga stock. This is useful for:
 \begin{enumerate}
     \item Development: load a test image in preference to the release image.
-    \item Patch: when the FPGA image doesn’t exist in the release yet.
-    \item Promoted: when the stock contains multiple compatible images, and we want to force a particular personality to load eg: DEC10 filter.
+    \item Patch: when the \glossy{FPGA Personality} doesn’t exist in the release yet.
+    \item Promoting: when the stock contains multiple compatible images, and we want to force a particular \glossy{FPGA Personality} to load eg: DEC10 filter.
 \end{enumerate}
 
 \pagebreak
@@ -531,22 +541,23 @@ Sysconfig is pre-configured according to application at the factory
 \begin{lstlisting}[language=bash,style=bashstyle,frame=single]
 
 acq2206_001> ls -1 /mnt/local
-acq420_custom			# pre-customisation for device driver load
-rc.user				# final stage boot customisation
-wr_cal				# White Rabbit calibration
-wrc.le.bin			# White Rabbit firmware
+acq420_custom       # pre-customisation for device driver load
+rc.user             # final stage boot customisation
+wr_cal              # White Rabbit calibration
+wrc.le.bin          # White Rabbit firmware
 
 acq2206_001> ls -R1 /mnt/local/sysconfig/
-acq400.sh			# sets major parameters like NBUF, BLEN
-bos.sh				# long transient limits
-epics.sh			# EPICS customisation
-site-1-peers			# peers
-transient.init			# early stage customisation
-wr.sh				# White Rabbit variables
+acq400.sh           # sets major parameters like NBUF, BLEN
+bos.sh              # long transient limits
+epics.sh            # EPICS customisation
+site-1-peers            # peers
+transient.init          # early stage customisation
+wr.sh               # White Rabbit variables
 
 ls /mnt/local/cal
 E4ssssssss.xml			# module calibration files.
 \end{lstlisting}
+EPICS customisation see \href{https://github.com/D-TACQ/acq400ioc/blob/epics7/README}{EPICS README}
 
 \subsection{packages}
 Optional packages can be enabled by \pcmd{mv} ing them from \pftxt{/mnt/packages.opt} to \pftxt{/mnt/packages}
